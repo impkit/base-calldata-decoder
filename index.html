@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base Calldata Decoder</title>
+    <style>
+        :root {
+            --bg-base: #0a0a0a;
+            --bg-surface: #121212;
+            --bg-elevated: #1a1a1a;
+            --border-color: #2a2a2a;
+            --text-primary: #e0e0e0;
+            --text-secondary: #888888;
+            --accent-blue: #0052ff;
+            --accent-blue-hover: #0044cc;
+            --accent-green: #00c853;
+            --font-mono: 'Fira Code', 'Consolas', 'Monaco', monospace;
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        header {
+            background-color: var(--bg-surface);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+        }
+
+        .logo-icon {
+            width: 24px;
+            height: 24px;
+            background-color: var(--accent-blue);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            color: white;
+        }
+
+        .network-badge {
+            background-color: rgba(0, 82, 255, 0.1);
+            color: var(--accent-blue);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            border: 1px solid rgba(0, 82, 255, 0.2);
+        }
+
+        /* Main Layout */
+        main {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* Input Section */
+        .input-section {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        .input-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .input-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .btn-decode {
+            background-color: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 0.5rem 1.25rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-decode:hover {
+            background-color: var(--accent-blue-hover);
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            background-color: var(--bg-base);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            padding: 1rem;
+            resize: vertical;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus {
+            border-color: var(--accent-blue);
+        }
+
+        textarea::placeholder {
+            color: #555;
+        }
+
+        /* Results Section */
+        .results-section {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            min-height: 200px;
+        }
+
+        .results-header {
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* Footer / Monetization */
+        footer {
+            background-color: var(--bg-surface);
+            border-top: 1px solid var(--border-color);
+            padding: 2rem;
+            margin-top: auto;
+        }
+
+        .monetization-widget {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .widget-title {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .widget-content {
+            background-color: var(--bg-elevated);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            main {
+                padding: 1rem;
+            }
+            
+            header {
+                padding: 1rem;
+            }
+
+            .input-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .btn-decode {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">
+            <div class="logo-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="16 18 22 12 16 6"></polyline>
+                    <polyline points="8 6 2 12 8 18"></polyline>
+                </svg>
+            </div>
+            Calldata Decoder
+        </div>
+        <div class="network-badge">Base Network</div>
+    </header>
+
+    <main>
+        <section class="input-section">
+            <div class="input-header">
+                <label for="calldata-input" class="input-label">Raw Calldata (Hex)</label>
+                <button class="btn-decode" id="btn-decode">Decode</button>
+            </div>
+            <textarea 
+                id="calldata-input" 
+                placeholder="0x..." 
+                spellcheck="false"
+            ></textarea>
+        </section>
+
+        <section class="results-section">
+            <div class="results-header">Decoded Parameters</div>
+            <div class="table-container" id="results-table-container">
+                <!-- Table will be injected here by JS -->
+                <div class="empty-state">
+                    Enter calldata and click Decode to view results.
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="monetization-widget">
+            <div class="widget-title">Powered by 1inch</div>
+            <div class="widget-content">
+                <!-- 1inch Widget Placeholder -->
+                <div id="one-inch-widget-container">
+                    Loading 1inch widget...
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+// [JS_LOGIC_MARKER] - STOP HERE
+
+(function () {
+  'use strict';
+
+  // --- DOM References ---
+  const inputEl = document.getElementById('calldata-input');
+  const decodeBtn = document.getElementById('btn-decode');
+  const resultEl = document.getElementById('decode-result');
+  const tableWrap = document.getElementById('decoded-table-wrap');
+  const tableBody = document.getElementById('decoded-table-body');
+  const gasPriceEl = document.getElementById('gas-price');
+  const gasGweiEl = document.getElementById('gas-gwei');
+  const gasUpdatedEl = document.getElementById('gas-updated');
+  const gasStatusEl = document.getElementById('gas-status');
+
+  // --- Utilities ---
+  const hexToBytes = (hex) => {
+    const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
+    const bytes = [];
+    for (let i = 0; i < clean.length; i += 2) {
+      bytes.push(parseInt(clean.slice(i, i + 2), 16));
+    }
+    return bytes;
+  };
+
+  const bytesToHex = (bytes) => '0x' + bytes.map(b => b.toString(16).padStart(2, '0')).join('');
+
+  const bytesToAscii = (bytes) => {
+    let s = '';
+    for (const b of bytes) {
+      if (b >= 32 && b <= 126) s += String.fromCharCode(b);
+      else s += '·';
+    }
+    return s;
+  };
+
+  const bytesToUtf8 = (bytes) => {
+    try {
+      return new TextDecoder('utf-8', { fatal: false }).decode(new Uint8Array(bytes));
+    } catch {
+      return bytesToAscii(bytes);
+    }
+  };
+
+  const bytesToNumber = (bytes) => {
+    // Try as uint256 via BigInt
+    try {
+      const hex = bytesToHex(bytes).replace(/^0x0+/, '0x') || '0x0';
+      const n = BigInt(hex);
+      if (n < 10n ** 24n) return n.toString();
+      return n.toString();
+    } catch {
+      return null;
+    }
+  };
+
+  const bytesToBool = (bytes) => {
+    const n = BigInt(bytesToHex(bytes));
+    return n === 0n ? 'false' : 'true';
+  };
+
+  const bytesToAddress = (bytes) => {
+    // Last 20 bytes as address
+    if (bytes.length < 20) return null;
+    const addr = bytes.slice(-20);
+    const hex = addr.map(b => b.toString(16).padStart(2, '0')).join('');
+    return '0x' + hex;
+  };
+
+  const bytesToBytes32 = (bytes) => bytesToHex(bytes);
+
+  const formatValue = (bytes) => {
+    // Heuristic type detection
+    const allZero = bytes.every(b => b === 0);
+    if (allZero) return { type: 'uint256', value: '0' };
+
+    // Check if it looks like an address (last 20 bytes non-zero, first 12 zero)
+    const first12Zero = bytes.slice(0, 12).every(b => b === 0);
+    const last20 = bytes.slice(-20);
+    const last20NonZero = last20.some(b => b !== 0);
+    if (first12Zero && last20NonZero) {
+      return { type: 'address', value: bytesToAddress(bytes) };
+    }
+
+    // Check if printable ASCII (most bytes printable)
+    const printable = bytes.filter(b => b >= 32 && b <= 126).length;
+    if (printable / bytes.length > 0.85 && bytes.length >= 4) {
+      const str = bytesToUtf8(bytes);
+      if (str.length >= 4) {
+        return { type: 'string', value: str };
+      }
+    }
+
+    // Try as number
+    const numStr = bytesToNumber(bytes);
+    if (numStr !== null && numStr.length <= 30) {
+      return { type: 'uint256', value: numStr };
+    }
+
+    // Try as bool
+    const boolStr = bytesToBool(bytes);
+    if (boolStr === 'true' || boolStr === 'false') {
+      return { type: 'bool', value: boolStr };
+    }
+
+    // Fallback: bytes32
+    return { type: 'bytes32', value: bytesToBytes32(bytes) };
+  };
+
+  // --- Method Identification (4-byte signature) ---
+async function fetchFunctionSignature(sig4) {
+    // Жесткое текстовое сложение без фигурных скобок для защиты от сбоев ИИ
+    const apiUrl = "https://api.4byte.sourcify.dev/signature-database/v1/lookup?function=0x" + methodSig;
+
+    console.log("fetchFunctionSignature отправляет запрос на эндпоинт:", url);
+    try {
+        const response = await fetch(url);
+        console.log("fetchFunctionSignature получил HTTP статус:", response.status);
+        if (!response.ok) return null;
+        const data = await response.json();
+        console.log("fetchFunctionSignature получил JSON-ответ:", data);
+        return data;
+    } catch (error) {
+        console.error("Ошибка внутри fetchFunctionSignature:", error);
+        return null;
+    }
+}
+
+
+  // --- Custom Client-Side Parsing ---
+  function parseCalldata(calldataHex) {
+    const clean = calldataHex.startsWith('0x') ? calldataHex.slice(2) : calldataHex;
+    if (clean.length < 8) {
+      throw new Error('Calldata too short to contain a 4-byte selector');
+    }
+
+    const sig4 = '0x' + clean.slice(0, 8);
+    const remaining = clean.slice(8);
+
+    // Segment into 32-byte chunks
+    const chunks = [];
+    for (let i = 0; i < remaining.length; i += 64) {
+      const chunkHex = remaining.slice(i, i + 64);
+      if (chunkHex.length === 64) {
+        chunks.push(hexToBytes(chunkHex));
+      } else if (chunkHex.length > 0) {
+        // Pad or handle partial chunk
+        const padded = chunkHex.padEnd(64, '0');
+        chunks.push(hexToBytes(padded));
+      }
+    }
+
+    return { sig4, chunks };
+  }
+
+  function renderTable(chunks) {
+    if (!tableBody) return;
+    tableBody.innerHTML = '';
+
+    if (chunks.length === 0) {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 3;
+      td.textContent = 'No parameters found in calldata.';
+      td.style.textAlign = 'center';
+      td.style.color = '#6b7280';
+      td.style.padding = '1rem';
+      tr.appendChild(td);
+      tableBody.appendChild(tr);
+      return;
+    }
+
+    chunks.forEach((bytes, index) => {
+      const { type, value } = formatValue(bytes);
+      const tr = document.createElement('tr');
+
+      const tdIndex = document.createElement('td');
+      tdIndex.textContent = index;
+      tdIndex.style.textAlign = 'center';
+      tdIndex.style.fontWeight = '600';
+      tdIndex.style.color = '#6366f1';
+
+      const tdType = document.createElement('td');
+      tdType.textContent = type;
+      tdType.style.fontFamily = 'monospace';
+      tdType.style.color = '#10b981';
+
+      const tdValue = document.createElement('td');
+      tdValue.textContent = value;
+      tdValue.style.fontFamily = 'monospace';
+      tdValue.style.wordBreak = 'break-all';
+      tdValue.style.maxWidth = '400px';
+
+      tr.appendChild(tdIndex);
+      tr.appendChild(tdType);
+      tr.appendChild(tdValue);
+      tableBody.appendChild(tr);
+    });
+  }
+
+  // --- Main Decode Handler ---
+async function handleDecode() {
+    console.log("=== ЗАПУСК ДЕКОДИРОВАНИЯ ===");
+    try {
+        const inputArea = document.querySelector('textarea');
+        if (!inputArea) {
+            console.error("КРИТИЧЕСКАЯ ОШИБКА: Поле ввода textarea не найдено в HTML!");
+            return;
+        }
+
+        let rawData = inputArea.value.trim();
+        console.log("Получены сырые данные из формы:", rawData);
+
+        if (!rawData.startsWith('0x')) {
+            rawData = '0x' + rawData;
+            console.log("Добавлен пропущенный префикс 0x:", rawData);
+        }
+
+        if (rawData.length < 10) {
+            console.warn("ВНИМАНИЕ: Строка слишком короткая для извлечения 4-байтового селектора метода.");
+            alert("Строка слишком короткая!");
+            return;
+        }
+
+        // Извлекаем сигнатуру метода (первые 4 байта = 8 символов после 0x)
+        const methodSig = rawData.substring(2, 10);
+        console.log("Извлечен 4-байтовый селектор метода (Hex):", methodSig);
+
+        // Строим правильный путь к новому шлюзу Sourcify
+        const apiUrl = "https://api.4byte.sourcify.dev/signature-database/v1/lookup?function=0x" + methodSig;
+
+        console.log("Отправка HTTP GET запроса на шлюз Sourcify:", apiUrl);
+
+        const response = await fetch(apiUrl);
+        console.log("Получен HTTP статус ответа от API:", response.status);
+
+        if (!response.ok) {
+            throw new Error(`Ошибка сети API Sourcify: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("JSON ответ от базы Sourcify успешно распарсен:", data);
+
+        // Ищем контейнер для вывода таблицы
+        const tableContainer = document.querySelector('table') || document.getElementById('results-table-container') || document.querySelector('div.mt-4');
+        if (!tableContainer) {
+            console.error("КРИТИЧЕСКАЯ ОШИБКА: Элемент таблицы/вывода результатов не найден в HTML-верстке!");
+            return;
+        }
+
+        console.log("Контейнер вывода найден в DOM. Начинаем рендеринг данных...");
+        
+        // Финальный парсинг данных для вывода в таблицу
+        let signatureText = "Unknown Method";
+        if (data && data.result && data.result.function && data.result.function["0x" + methodSig]) {
+            signatureText = data.result.function["0x" + methodSig][0].name;
+        }
+
+        console.log("Формируем таблицу для метода:", signatureText);
+
+        // Извлекаем оставшуюся calldata без 4-байтового селектора метода
+        const argumentsData = rawData.substring(10);
+        const chunks = [];
+        for (let i = 0; i < argumentsData.length; i += 64) {
+            if (i + 64 <= argumentsData.length) {
+                chunks.push(argumentsData.substring(i, i + 64));
+            }
+        }
+
+        // Строим HTML-структуру профессиональной таблицы параметров
+        let tableHtml = `
+            <div style="background:#1e293b; padding:20px; border-radius:8px; border:1px solid #334155; margin-top:15px;">
+                <h3 style="color:#60a5fa; margin-top:0; margin-bottom:15px; font-size:16px;">
+                    Method: <span style="color:#fff; font-family:monospace;">${signatureText}</span>
+                </h3>
+                <table style="width:100%; border-collapse:collapse; text-align:left; font-size:14px; font-family:monospace;">
+                    <thead>
+                        <tr style="border-bottom:2px solid #475569; color:#94a3b8;">
+                            <th style="padding:10px 5px;">#</th>
+                            <th style="padding:10px 5px;">Raw Hex Chunk (32 bytes)</th>
+                            <th style="padding:10px 5px;">Decoded Value Preview</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+// Извлекаем типы аргументов из сигнатуры, если они есть
+let paramTypes = [];
+if (signatureText.includes('(')) {
+    const paramsStart = signatureText.indexOf('(') + 1;
+    const paramsEnd = signatureText.indexOf(')');
+    paramTypes = signatureText.substring(paramsStart, paramsEnd).split(',');
+}
+
+chunks.forEach((chunk, index) => {
+    let preview = "";
+    // Определяем тип параметра на основе индекса в сигнатуре
+    const currentType = paramTypes[index] ? paramTypes[index].trim() : 'unknown';
+    console.log(`Строка #${index}: тип из сигнатуры = ${currentType}`);
+
+    if (currentType === 'address') {
+        // Жестко декодируем как кошелек (забираем последние 40 символов)
+        preview = `<span style="color:#60a5fa">Address:</span> 0x${chunk.substring(24)}`;
+    } else if (currentType === 'uint256' || currentType === 'uint') {
+        // Жестко декодируем как число
+        try {
+            const rawNumber = BigInt("0x" + chunk);
+            // Если число гигантское (Wei), переводим в читаемые токены (деление на 10^18)
+            if (rawNumber >= BigInt(10**14)) {
+                const formatted = Number(rawNumber / BigInt(10**14)) / 10000;
+                preview = `<span style="color:#34d399">Amount:</span> <strong>${formatted} tokens</strong> (Raw: ${rawNumber.toString()})`;
+            } else {
+                preview = `<span style="color:#34d399">Value:</span> <strong>${rawNumber.toString()}</strong>`;
+            }
+        } catch(e) {
+            preview = "Error parsing number";
+        }
+    } else {
+        // Резервный авто-декодер на случай, если сигнатура не нашлась в базе
+        if (chunk.startsWith("000000000000000000000000000000000000000000000000")) {
+            try {
+                preview = BigInt("0x" + chunk).toString();
+            } catch(e) { preview = "Hex data"; }
+        } else {
+            preview = "0x" + chunk.substring(24);
+        }
+    }
+
+    tableHtml += `
+        <tr style="border-bottom:1px solid #334155; color:#e2e8f0;">
+            <td style="padding:12px 5px; color:#64748b;">${index}</td>
+            <td style="padding:12px 5px; color:#cbd5e1; word-break:break-all;">0x${chunk}</td>
+            <td style="padding:12px 5px; word-break:break-all;">${preview}</td>
+        </tr>
+    `;
+});
+
+
+        tableHtml += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        // Инжектируем готовую таблицу на экран
+        tableContainer.innerHTML = tableHtml;
+        console.log("=== ТАБЛИЦА ПАРАМЕТРОВ УСПЕШНО ОТРИСОВАНА ===");
+
+
+    } catch (error) {
+        console.error("ПРОИЗОШЕЛ СБОЙ В ЦЕПОЧКЕ ДЕКОДИРОВАНИЯ:", error);
+    }
+}
+
+  // --- Base Network Gas Tracker ---
+async function fetchGasPrice() {
+    try {
+        const response = await fetch('https://mainnet.base.org', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                jsonrpc: '2.0',
+                method: 'eth_gasPrice',
+                params: [],
+                id: 1
+            })
+        });
+        const data = await response.json();
+        if (data && data.result) {
+            const gasWei = BigInt(data.result);
+            // Безопасный перевод Wei в Gwei
+            const gasGwei = Number(gasWei / BigInt(100000000)) / 10; 
+            
+            const gasElement = document.querySelector('.bg-blue-600') || document.querySelector('header div') || document.querySelector('nav div');
+            
+            if (gasElement) {
+                const badge = document.getElementById('gas-badge') || document.createElement('span');
+                badge.id = 'gas-badge';
+                badge.style.marginLeft = '15px';
+                badge.style.fontSize = '12px';
+                badge.style.color = '#60a5fa';
+                badge.innerHTML = `• Base Gas: ${gasGwei > 0 ? gasGwei.toFixed(4) : '0.005'} Gwei`;
+                
+                if (!document.getElementById('gas-badge')) {
+                    gasElement.appendChild(badge);
+                }
+            } else {
+                console.log("Gas element target layout not found, raw price:", gasGwei);
+            }
+        }
+    } catch (error) {
+        console.error("Gas price parsing error:", error);
+    }
+}
+
+
+
+  function updateGasDisplay(wei, gwei) {
+    if (gasPriceEl) gasPriceEl.textContent = wei.toString();
+    if (gasGweiEl) gasGweiEl.textContent = gwei.toFixed(4);
+    if (gasUpdatedEl) {
+      const now = new Date();
+      gasUpdatedEl.textContent = now.toLocaleTimeString();
+    }
+    if (gasStatusEl) {
+      gasStatusEl.textContent = 'Live';
+      gasStatusEl.style.color = '#10b981';
+    }
+  }
+
+  function handleGasError(err) {
+    if (gasStatusEl) {
+      gasStatusEl.textContent = 'Error';
+      gasStatusEl.style.color = '#ef4444';
+    }
+    console.error('Gas price fetch error:', err);
+  }
+
+  // Async loop for gas tracking
+async function gasTrackerLoop() {
+    await fetchGasPrice();
+    setTimeout(gasTrackerLoop, 10000); // Обновление каждые 10 секунд
+}
+
+
+  // --- Initialization ---
+  function init() {
+    // Bind decode button
+    if (decodeBtn) {
+      decodeBtn.addEventListener('click', handleDecode);
+    }
+
+    // Allow Enter key in textarea to trigger decode
+    if (inputEl) {
+      inputEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          handleDecode();
+        }
+      });
+    }
+
+    // Start gas tracker
+    gasTrackerLoop();
+  }
+
+  // Run on DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+})();
+    </script>
+</body>
+</html>
