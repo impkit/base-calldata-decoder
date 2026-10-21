@@ -308,12 +308,10 @@
     </footer>
 
     <script>
-// [JS_LOGIC_MARKER] - STOP HERE
 
 (function () {
   'use strict';
 
-  // --- DOM References ---
   const inputEl = document.getElementById('calldata-input');
   const decodeBtn = document.getElementById('btn-decode');
   const resultEl = document.getElementById('decode-result');
@@ -324,7 +322,6 @@
   const gasUpdatedEl = document.getElementById('gas-updated');
   const gasStatusEl = document.getElementById('gas-status');
 
-  // --- Utilities ---
   const hexToBytes = (hex) => {
     const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
     const bytes = [];
@@ -354,7 +351,6 @@
   };
 
   const bytesToNumber = (bytes) => {
-    // Try as uint256 via BigInt
     try {
       const hex = bytesToHex(bytes).replace(/^0x0+/, '0x') || '0x0';
       const n = BigInt(hex);
@@ -371,7 +367,6 @@
   };
 
   const bytesToAddress = (bytes) => {
-    // Last 20 bytes as address
     if (bytes.length < 20) return null;
     const addr = bytes.slice(-20);
     const hex = addr.map(b => b.toString(16).padStart(2, '0')).join('');
@@ -381,11 +376,9 @@
   const bytesToBytes32 = (bytes) => bytesToHex(bytes);
 
   const formatValue = (bytes) => {
-    // Heuristic type detection
     const allZero = bytes.every(b => b === 0);
     if (allZero) return { type: 'uint256', value: '0' };
 
-    // Check if it looks like an address (last 20 bytes non-zero, first 12 zero)
     const first12Zero = bytes.slice(0, 12).every(b => b === 0);
     const last20 = bytes.slice(-20);
     const last20NonZero = last20.some(b => b !== 0);
@@ -393,7 +386,6 @@
       return { type: 'address', value: bytesToAddress(bytes) };
     }
 
-    // Check if printable ASCII (most bytes printable)
     const printable = bytes.filter(b => b >= 32 && b <= 126).length;
     if (printable / bytes.length > 0.85 && bytes.length >= 4) {
       const str = bytesToUtf8(bytes);
@@ -402,25 +394,21 @@
       }
     }
 
-    // Try as number
     const numStr = bytesToNumber(bytes);
     if (numStr !== null && numStr.length <= 30) {
       return { type: 'uint256', value: numStr };
     }
 
-    // Try as bool
     const boolStr = bytesToBool(bytes);
     if (boolStr === 'true' || boolStr === 'false') {
       return { type: 'bool', value: boolStr };
     }
 
-    // Fallback: bytes32
     return { type: 'bytes32', value: bytesToBytes32(bytes) };
   };
 
-  // --- Method Identification (4-byte signature) ---
 async function fetchFunctionSignature(sig4) {
-    // Жесткое текстовое сложение без фигурных скобок для защиты от сбоев ИИ
+
     const apiUrl = "https://api.4byte.sourcify.dev/signature-database/v1/lookup?function=0x" + methodSig;
 
     console.log("fetchFunctionSignature отправляет запрос на эндпоинт:", url);
@@ -437,9 +425,7 @@ async function fetchFunctionSignature(sig4) {
     }
 }
 
-
-  // --- Custom Client-Side Parsing ---
-  function parseCalldata(calldataHex) {
+ function parseCalldata(calldataHex) {
     const clean = calldataHex.startsWith('0x') ? calldataHex.slice(2) : calldataHex;
     if (clean.length < 8) {
       throw new Error('Calldata too short to contain a 4-byte selector');
@@ -448,7 +434,6 @@ async function fetchFunctionSignature(sig4) {
     const sig4 = '0x' + clean.slice(0, 8);
     const remaining = clean.slice(8);
 
-    // Segment into 32-byte chunks
     const chunks = [];
     for (let i = 0; i < remaining.length; i += 64) {
       const chunkHex = remaining.slice(i, i + 64);
@@ -509,7 +494,6 @@ async function fetchFunctionSignature(sig4) {
     });
   }
 
-  // --- Main Decode Handler ---
 async function handleDecode() {
     console.log("=== ЗАПУСК ДЕКОДИРОВАНИЯ ===");
     try {
@@ -533,11 +517,9 @@ async function handleDecode() {
             return;
         }
 
-        // Извлекаем сигнатуру метода (первые 4 байта = 8 символов после 0x)
         const methodSig = rawData.substring(2, 10);
         console.log("Извлечен 4-байтовый селектор метода (Hex):", methodSig);
 
-        // Строим правильный путь к новому шлюзу Sourcify
         const apiUrl = "https://api.4byte.sourcify.dev/signature-database/v1/lookup?function=0x" + methodSig;
 
         console.log("Отправка HTTP GET запроса на шлюз Sourcify:", apiUrl);
@@ -552,7 +534,6 @@ async function handleDecode() {
         const data = await response.json();
         console.log("JSON ответ от базы Sourcify успешно распарсен:", data);
 
-        // Ищем контейнер для вывода таблицы
         const tableContainer = document.querySelector('table') || document.getElementById('results-table-container') || document.querySelector('div.mt-4');
         if (!tableContainer) {
             console.error("КРИТИЧЕСКАЯ ОШИБКА: Элемент таблицы/вывода результатов не найден в HTML-верстке!");
@@ -561,7 +542,6 @@ async function handleDecode() {
 
         console.log("Контейнер вывода найден в DOM. Начинаем рендеринг данных...");
         
-        // Финальный парсинг данных для вывода в таблицу
         let signatureText = "Unknown Method";
         if (data && data.result && data.result.function && data.result.function["0x" + methodSig]) {
             signatureText = data.result.function["0x" + methodSig][0].name;
@@ -569,7 +549,6 @@ async function handleDecode() {
 
         console.log("Формируем таблицу для метода:", signatureText);
 
-        // Извлекаем оставшуюся calldata без 4-байтового селектора метода
         const argumentsData = rawData.substring(10);
         const chunks = [];
         for (let i = 0; i < argumentsData.length; i += 64) {
@@ -578,7 +557,6 @@ async function handleDecode() {
             }
         }
 
-        // Строим HTML-структуру профессиональной таблицы параметров
         let tableHtml = `
             <div style="background:#1e293b; padding:20px; border-radius:8px; border:1px solid #334155; margin-top:15px;">
                 <h3 style="color:#60a5fa; margin-top:0; margin-bottom:15px; font-size:16px;">
@@ -595,7 +573,6 @@ async function handleDecode() {
                     <tbody>
         `;
 
-// Извлекаем типы аргументов из сигнатуры, если они есть
 let paramTypes = [];
 if (signatureText.includes('(')) {
     const paramsStart = signatureText.indexOf('(') + 1;
@@ -605,15 +582,12 @@ if (signatureText.includes('(')) {
 
 chunks.forEach((chunk, index) => {
     let preview = "";
-    // Определяем тип параметра на основе индекса в сигнатуре
     const currentType = paramTypes[index] ? paramTypes[index].trim() : 'unknown';
     console.log(`Строка #${index}: тип из сигнатуры = ${currentType}`);
 
     if (currentType === 'address') {
-        // Жестко декодируем как кошелек (забираем последние 40 символов)
         preview = `<span style="color:#60a5fa">Address:</span> 0x${chunk.substring(24)}`;
     } else if (currentType === 'uint256' || currentType === 'uint') {
-        // Жестко декодируем как число
         try {
             const rawNumber = BigInt("0x" + chunk);
             // Если число гигантское (Wei), переводим в читаемые токены (деление на 10^18)
@@ -627,7 +601,7 @@ chunks.forEach((chunk, index) => {
             preview = "Error parsing number";
         }
     } else {
-        // Резервный авто-декодер на случай, если сигнатура не нашлась в базе
+
         if (chunk.startsWith("000000000000000000000000000000000000000000000000")) {
             try {
                 preview = BigInt("0x" + chunk).toString();
@@ -646,24 +620,20 @@ chunks.forEach((chunk, index) => {
     `;
 });
 
-
         tableHtml += `
                     </tbody>
                 </table>
             </div>
         `;
 
-        // Инжектируем готовую таблицу на экран
         tableContainer.innerHTML = tableHtml;
         console.log("=== ТАБЛИЦА ПАРАМЕТРОВ УСПЕШНО ОТРИСОВАНА ===");
-
 
     } catch (error) {
         console.error("ПРОИЗОШЕЛ СБОЙ В ЦЕПОЧКЕ ДЕКОДИРОВАНИЯ:", error);
     }
 }
 
-  // --- Base Network Gas Tracker ---
 async function fetchGasPrice() {
     try {
         const response = await fetch('https://mainnet.base.org', {
@@ -727,21 +697,18 @@ async function fetchGasPrice() {
     console.error('Gas price fetch error:', err);
   }
 
-  // Async loop for gas tracking
 async function gasTrackerLoop() {
     await fetchGasPrice();
     setTimeout(gasTrackerLoop, 10000); // Обновление каждые 10 секунд
 }
 
 
-  // --- Initialization ---
   function init() {
     // Bind decode button
     if (decodeBtn) {
       decodeBtn.addEventListener('click', handleDecode);
     }
 
-    // Allow Enter key in textarea to trigger decode
     if (inputEl) {
       inputEl.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -751,11 +718,9 @@ async function gasTrackerLoop() {
       });
     }
 
-    // Start gas tracker
     gasTrackerLoop();
   }
 
-  // Run on DOM ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
