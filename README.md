@@ -9,10 +9,16 @@ A lightweight, 100% client-side Web3 developer utility specifically tailored for
 - **Automated Signature Resolution:** Features integration with decentralized signature databases to instantly resolve function selectors (e.g., `transfer(address,uint256)`) and accurately segment the remaining 32-byte arguments chunk by chunk.
 - **Real-Time Network State:** Direct connection to official Base network JSON-RPC nodes (`mainnet.base.org`) to fetch current transaction fee metrics directly on page load.
 
-## Technical Stack
+## Quick Start
 
-- Frontend Architecture: Standalone Single Page Application (`index.html`)
-- Styling Framework: Zero external dependencies, modular embedded pure CSS
-- Network Integration: Async Vanilla JS Stream Fetch API
+1. Access the live deployment directly at https://impkit.github.io/base-calldata-decoder/ (or open `index.html` locally for full offline execution).
+2. Paste raw EVM transaction hex payload (including or excluding the `0x` prefix) into the input area.
+3. Click **Decode Payload** to tokenize arguments and fetch function signatures.
+
+## Technical Stack & Architecture
+
+- Frontend Architecture: Modular Single Page Application (Separated into `index.html`, `styles.css`, `app.js`)
+- Styling Framework: Zero external dependencies, pure CSS driven by strict semantic tokenization variables
+- Network Integration: Async Vanilla JS Stream Fetch API connected to decentralized Sourcify Aggregator
 - Target Network: Base Blockchain (EVM compatible)
 
